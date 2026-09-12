@@ -1,0 +1,95 @@
+{
+  "info": {
+    "name": "venda-veiculos-service",
+    "description": "Coleção de testes das rotas do serviço de venda de veículos. Ver docs/contratos-api.md.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081" },
+    { "key": "internalToken", "value": "troque-por-um-token-real" },
+    { "key": "veiculoId", "value": "" },
+    { "key": "codigoPagamento", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Interno - criar projecao de veiculo",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Internal-Token", "value": "{{internalToken}}" }
+        ],
+        "url": "{{baseUrl}}/interno/veiculos",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"{{veiculoId}}\",\n  \"marca\": \"Fiat\",\n  \"modelo\": \"Argo\",\n  \"ano\": 2022,\n  \"cor\": \"Prata\",\n  \"preco\": 78900.00,\n  \"estadoConservacao\": \"SEMINOVO\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Interno - atualizar projecao de veiculo",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Internal-Token", "value": "{{internalToken}}" }
+        ],
+        "url": "{{baseUrl}}/interno/veiculos/{{veiculoId}}",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"{{veiculoId}}\",\n  \"marca\": \"Fiat\",\n  \"modelo\": \"Argo\",\n  \"ano\": 2022,\n  \"cor\": \"Branco\",\n  \"preco\": 76900.00,\n  \"estadoConservacao\": \"SEMINOVO\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Listar veiculos a venda",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/veiculos/a-venda"
+      }
+    },
+    {
+      "name": "Listar veiculos vendidos",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/veiculos/vendidos"
+      }
+    },
+    {
+      "name": "Efetuar venda",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": "{{baseUrl}}/vendas",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"veiculoId\": \"{{veiculoId}}\",\n  \"cpfComprador\": \"12345678901\",\n  \"dataVenda\": \"2026-09-12\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Webhook pagamento aprovado",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": "{{baseUrl}}/pagamentos/webhook",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"codigoPagamento\": \"{{codigoPagamento}}\",\n  \"status\": \"APROVADO\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Webhook pagamento cancelado",
+      "request": {
+        "method": "POST",
+        "header": [ { "key": "Content-Type", "value": "application/json" } ],
+        "url": "{{baseUrl}}/pagamentos/webhook",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"codigoPagamento\": \"{{codigoPagamento}}\",\n  \"status\": \"CANCELADO\"\n}"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,203 @@
+openapi: 3.0.3
+info:
+  title: venda-veiculos-service
+  description: >
+    Listagem, compra e webhook de pagamento de veículos. Ver docs/contratos-api.md e
+    docs/arquitetura.md para o contexto completo da solução (dois serviços, comunicação via HTTP).
+  version: "0.1.0"
+servers:
+  - url: http://localhost:8081
+    description: Ambiente local
+
+tags:
+  - name: interno
+    description: Chamado apenas pelo software principal (autenticado com X-Internal-Token)
+  - name: veiculos
+    description: Listagens públicas de veículos
+  - name: vendas
+    description: Efetivação de venda
+  - name: pagamentos
+    description: Webhook da processadora de pagamento
+
+paths:
+  /interno/veiculos:
+    post:
+      tags: [interno]
+      summary: Criar projeção de veículo (chamado pelo software principal)
+      security:
+        - internalToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VeiculoSyncRequest"
+      responses:
+        "201":
+          description: Projeção criada
+
+  /interno/veiculos/{id}:
+    put:
+      tags: [interno]
+      summary: Atualizar projeção de veículo (chamado pelo software principal)
+      security:
+        - internalToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VeiculoSyncRequest"
+      responses:
+        "200":
+          description: Projeção atualizada
+
+  /veiculos/a-venda:
+    get:
+      tags: [veiculos]
+      summary: Listar veículos à venda, ordenados por preço crescente
+      responses:
+        "200":
+          description: Lista de veículos disponíveis
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VeiculoResponse"
+
+  /veiculos/vendidos:
+    get:
+      tags: [veiculos]
+      summary: Listar veículos vendidos, ordenados por preço crescente
+      responses:
+        "200":
+          description: Lista de veículos vendidos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VeiculoResponse"
+
+  /vendas:
+    post:
+      tags: [vendas]
+      summary: Efetuar a venda de um veículo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VendaRequest"
+      responses:
+        "201":
+          description: Venda criada, aguardando confirmação de pagamento
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendaResponse"
+        "409":
+          description: Veículo não está disponível para venda
+
+  /pagamentos/webhook:
+    post:
+      tags: [pagamentos]
+      summary: Notificação de status de pagamento (idempotente)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WebhookRequest"
+      responses:
+        "200":
+          description: Notificação processada (ou ignorada, se já em estado final)
+        "404":
+          description: codigoPagamento não encontrado
+
+components:
+  securitySchemes:
+    internalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Token
+
+  schemas:
+    VeiculoSyncRequest:
+      type: object
+      required: [id, marca, modelo, ano, cor, preco, estadoConservacao]
+      properties:
+        id:
+          type: string
+          format: uuid
+        marca:
+          type: string
+        modelo:
+          type: string
+        ano:
+          type: integer
+        cor:
+          type: string
+        preco:
+          type: number
+          format: double
+        estadoConservacao:
+          type: string
+          enum: [NOVO, SEMINOVO, USADO]
+
+    VeiculoResponse:
+      allOf:
+        - $ref: "#/components/schemas/VeiculoSyncRequest"
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [DISPONIVEL, RESERVADO, VENDIDO]
+
+    VendaRequest:
+      type: object
+      required: [veiculoId, cpfComprador, dataVenda]
+      properties:
+        veiculoId:
+          type: string
+          format: uuid
+        cpfComprador:
+          type: string
+          example: "12345678901"
+        dataVenda:
+          type: string
+          format: date
+
+    VendaResponse:
+      allOf:
+        - $ref: "#/components/schemas/VendaRequest"
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            codigoPagamento:
+              type: string
+              format: uuid
+            statusPagamento:
+              type: string
+              enum: [PENDENTE, APROVADO, CANCELADO]
+
+    WebhookRequest:
+      type: object
+      required: [codigoPagamento, status]
+      properties:
+        codigoPagamento:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [APROVADO, CANCELADO]
