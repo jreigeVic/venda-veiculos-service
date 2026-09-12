@@ -144,16 +144,47 @@ compartilhado — token simples foi escolhido por ser suficiente para o escopo d
 
 ## 11. Entregáveis adicionais solicitados nesta rodada
 
-Pedido do usuário, não é mais uma pergunta em aberto — é trabalho a ser feito, registrado aqui para
-rastreio:
+Pedido do usuário — status após a implementação:
 
-- [ ] Diagramas Mermaid: fluxograma da aplicação e diagramas de sequência por fluxo de negócio.
-- [ ] HLD (High-Level Design) e LLD (Low-Level Design) completos — em `docs/hld.md` e `docs/lld.md`.
-- [ ] `openapi.yaml` (Swagger) em cada repositório.
-- [ ] Coleção Postman por repositório, cobrindo todas as rotas.
-- [ ] Tabela(s) de log/auditoria para sucesso e erro nos fluxos de cadastro de veículo e de venda.
-- [ ] READMEs sempre atualizados, com link cruzado entre as documentações, explicando o que cada
-      serviço faz, para que serve, sua estrutura e como rodar/testar.
-- [ ] Manter toda a documentação atualizada continuamente, não só nesta rodada.
+- [x] Diagramas Mermaid: fluxograma da aplicação e diagramas de sequência por fluxo de negócio.
+- [x] HLD (High-Level Design) e LLD (Low-Level Design) completos — em `docs/hld.md` e `docs/lld.md`.
+- [x] `openapi.yaml` (Swagger) em cada repositório.
+- [x] Coleção Postman por repositório, cobrindo todas as rotas.
+- [x] Tabela(s) de log/auditoria para sucesso e erro nos fluxos de cadastro de veículo e de venda
+      (`LogAuditoria`, alimentada pelos services e pelo `GlobalExceptionHandler` de cada serviço).
+- [x] READMEs atualizados, com link cruzado entre as documentações, explicando o que cada serviço
+      faz, para que serve, sua estrutura e como rodar/testar.
+- [x] Manter a documentação atualizada — este item permanece como prática contínua a cada mudança.
 
-`[ ]` Em andamento — ver progresso no README de cada repositório.
+`[x]` Concluído nesta rodada.
+
+---
+
+## 12. Implementação e validação end-to-end real (nesta rodada)
+
+Além da documentação, foi implementado o código funcional dos dois serviços (entidades,
+controllers, services, exceptions, segurança, outbox, webhook, mock de pagamento) com testes
+automatizados (~96–97% de cobertura de linha em ambos, acima dos 80% exigidos) e o pipeline de
+CI/CD completo foi **executado de verdade** no GitHub Actions, não apenas escrito:
+
+- CI (`ci.yml`, em PR): build + testes + gate de cobertura de 80% — passou nos dois repositórios,
+  confirmando que **Java 26 está disponível** via `actions/setup-java` + Temurin (resolve a dúvida
+  do item 6 — não foi necessário usar o plano B de Java 21).
+- CD (`cd.yml`, no merge para `main`): build da imagem Docker, push para `ghcr.io`, criação de um
+  cluster `kind` efêmero no próprio runner, aplicação dos manifests Kubernetes e espera do rollout
+  — **executado com sucesso de ponta a ponta nos dois repositórios**, com o Postgres subindo no
+  cluster e a aplicação conectando nele e respondendo `/actuator/health`.
+- Bug real encontrado e corrigido pelo próprio pipeline: o `venda-veiculos-service` subia na porta
+  8080 (padrão do Spring Boot) enquanto o `Deployment`/`Service`/probes esperavam 8081, causando
+  `CrashLoopBackOff` — sem `server.port` configurado. Corrigido adicionando
+  `server.port=${SERVER_PORT:8081}` em `application.properties`. Identificado através dos logs de
+  diagnóstico adicionados ao próprio workflow de CD.
+
+Todas as mudanças (incluindo essa correção) foram feitas via Pull Request e merge, com CI
+passando antes do merge — nenhum commit foi feito direto na `main` de nenhum dos dois repositórios.
+
+**O que ainda depende de você:** o vídeo de demonstração ponta-a-ponta (cadastro → sincronização →
+compra → webhook de pagamento → listagens) e a montagem do PDF final de entrega com os links dos
+dois repositórios — isso é execução manual/gravação, fora do que posso fazer.
+
+`[x]` Concluído nesta rodada.
