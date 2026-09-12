@@ -1,0 +1,63 @@
+name: CD
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.vars.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login no GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Definir nome da imagem
+        id: vars
+        run: |
+          owner=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/${owner}/venda-veiculos-service:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "image_latest=ghcr.io/${owner}/venda-veiculos-service:latest" >> "$GITHUB_OUTPUT"
+
+      - name: Build e push da imagem
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.vars.outputs.image }}
+            ${{ steps.vars.outputs.image_latest }}
+
+  deploy-local-kind:
+    needs: build-and-push-image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Criar cluster kind (mock local de um cluster gerenciado, ex. EKS)
+        uses: helm/kind-action@v1
+
+      - name: Aplicar manifests Kubernetes
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/postgres.yaml
+          kubectl create secret generic venda-veiculos-secrets \
+            --namespace venda-veiculos \
+            --from-literal=db-password=postgres \
+            --from-literal=internal-token=ci-token
+          kubectl set image -f k8s/deployment.yaml venda-veiculos-service=${{ needs.build-and-push-image.outputs.image }} --local -o yaml | kubectl apply -f -
+          kubectl apply -f k8s/service.yaml
+
+      - name: Aguardar rollout
+        run: kubectl rollout status deployment/venda-veiculos-service -n venda-veiculos --timeout=180s
