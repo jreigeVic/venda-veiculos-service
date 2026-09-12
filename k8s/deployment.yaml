@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: venda-veiculos-service
+  namespace: venda-veiculos
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: venda-veiculos-service
+  template:
+    metadata:
+      labels:
+        app: venda-veiculos-service
+    spec:
+      containers:
+        - name: venda-veiculos-service
+          image: ghcr.io/jreigevic/venda-veiculos-service:latest
+          ports:
+            - containerPort: 8081
+          env:
+            - name: DB_HOST
+              value: postgres.venda-veiculos.svc.cluster.local
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME
+              value: venda_veiculos_db
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: venda-veiculos-secrets
+                  key: db-password
+            - name: INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: venda-veiculos-secrets
+                  key: internal-token
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 15
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8081
+            initialDelaySeconds: 30
