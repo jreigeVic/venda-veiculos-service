@@ -56,6 +56,18 @@
       }
     },
     {
+      "name": "Listar veiculos por status",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/veiculos?status=RESERVADO",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "veiculos" ],
+          "query": [ { "key": "status", "value": "RESERVADO" } ]
+        }
+      }
+    },
+    {
       "name": "Efetuar venda",
       "request": {
         "method": "POST",

@@ -84,13 +84,21 @@ Resposta `200 OK`:
 
 Retorna veículos com `status = VENDIDO`, ordenados por `preco` crescente. Mesmo formato acima.
 
+### `GET /veiculos?status={status}` — listagem de veículos por status
+
+Retorna veículos com o `status` informado (`DISPONIVEL`, `RESERVADO` ou `VENDIDO`), ordenados por
+`preco` crescente. Mesmo formato de resposta de `/veiculos/a-venda` e `/veiculos/vendidos` —
+equivalente a `GET /veiculos?status=DISPONIVEL` e `GET /veiculos?status=VENDIDO`,
+respectivamente, mas permite consultar também `RESERVADO` (não exposto pelas duas rotas
+nomeadas). Falha com `400 Bad Request` se `status` não for um dos três valores válidos.
+
 ### `POST /vendas` — efetuar a venda de um veículo
 
 Requisição:
 ```json
 {
   "veiculoId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-  "cpfComprador": "12345678901",
+  "cpfComprador": "111.444.777-35",
   "dataVenda": "2026-09-12"
 }
 ```

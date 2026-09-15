@@ -92,4 +92,16 @@ class VeiculoProjecaoServiceTest {
         List<VeiculoProjecao> resultado = service.listarVendidos();
         assertThat(resultado).isEmpty();
     }
+
+    @Test
+    void deveListarVeiculosPorStatusReservado() {
+        UUID id = UUID.randomUUID();
+        VeiculoProjecao reservado = new VeiculoProjecao(id, "Fiat", "Argo", 2022, "Prata",
+                BigDecimal.valueOf(78900), EstadoConservacao.SEMINOVO, StatusVeiculo.RESERVADO, null);
+        when(repository.findByStatusOrderByPrecoAsc(StatusVeiculo.RESERVADO)).thenReturn(List.of(reservado));
+
+        List<VeiculoProjecao> resultado = service.listarPorStatus(StatusVeiculo.RESERVADO);
+
+        assertThat(resultado).containsExactly(reservado);
+    }
 }

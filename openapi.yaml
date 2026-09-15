@@ -87,6 +87,29 @@ paths:
                 items:
                   $ref: "#/components/schemas/VeiculoResponse"
 
+  /veiculos:
+    get:
+      tags: [veiculos]
+      summary: Listar veículos por status, ordenados por preço crescente
+      parameters:
+        - name: status
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [DISPONIVEL, RESERVADO, VENDIDO]
+      responses:
+        "200":
+          description: Lista de veículos com o status informado
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/VeiculoResponse"
+        "400":
+          description: status ausente ou inválido
+
   /vendas:
     post:
       tags: [vendas]
@@ -171,7 +194,7 @@ components:
           format: uuid
         cpfComprador:
           type: string
-          example: "12345678901"
+          example: "111.444.777-35"
         dataVenda:
           type: string
           format: date
