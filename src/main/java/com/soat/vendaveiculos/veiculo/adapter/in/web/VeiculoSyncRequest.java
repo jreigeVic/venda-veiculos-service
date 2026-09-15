@@ -1,5 +1,6 @@
-package com.soat.vendaveiculos.veiculo;
+package com.soat.vendaveiculos.veiculo.adapter.in.web;
 
+import com.soat.vendaveiculos.veiculo.domain.EstadoConservacao;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;

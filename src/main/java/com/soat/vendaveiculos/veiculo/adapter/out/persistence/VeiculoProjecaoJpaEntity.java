@@ -1,5 +1,7 @@
-package com.soat.vendaveiculos.veiculo;
+package com.soat.vendaveiculos.veiculo.adapter.out.persistence;
 
+import com.soat.vendaveiculos.veiculo.domain.EstadoConservacao;
+import com.soat.vendaveiculos.veiculo.domain.StatusVeiculo;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -20,7 +22,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class VeiculoProjecao {
+public class VeiculoProjecaoJpaEntity {
 
     @Id
     private UUID id;
@@ -43,8 +45,4 @@ public class VeiculoProjecao {
 
     @Version
     private Long versao;
-
-    public boolean estaDisponivel() {
-        return status == StatusVeiculo.DISPONIVEL;
-    }
 }

@@ -1,4 +1,8 @@
-package com.soat.vendaveiculos.veiculo;
+package com.soat.vendaveiculos.veiculo.adapter.in.web;
+
+import com.soat.vendaveiculos.veiculo.domain.EstadoConservacao;
+import com.soat.vendaveiculos.veiculo.domain.StatusVeiculo;
+import com.soat.vendaveiculos.veiculo.domain.VeiculoProjecao;
 
 import java.math.BigDecimal;
 import java.util.UUID;

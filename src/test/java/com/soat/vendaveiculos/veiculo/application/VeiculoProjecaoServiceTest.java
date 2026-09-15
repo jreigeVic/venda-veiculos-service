@@ -1,6 +1,11 @@
-package com.soat.vendaveiculos.veiculo;
+package com.soat.vendaveiculos.veiculo.application;
 
-import com.soat.vendaveiculos.auditoria.AuditoriaService;
+import com.soat.vendaveiculos.auditoria.application.port.out.AuditoriaPort;
+import com.soat.vendaveiculos.veiculo.application.port.in.DadosSincronizacaoVeiculo;
+import com.soat.vendaveiculos.veiculo.application.port.out.VeiculoProjecaoRepositoryPort;
+import com.soat.vendaveiculos.veiculo.domain.EstadoConservacao;
+import com.soat.vendaveiculos.veiculo.domain.StatusVeiculo;
+import com.soat.vendaveiculos.veiculo.domain.VeiculoProjecao;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,10 +26,10 @@ import static org.mockito.Mockito.when;
 class VeiculoProjecaoServiceTest {
 
     @Mock
-    private VeiculoProjecaoRepository repository;
+    private VeiculoProjecaoRepositoryPort repository;
 
     @Mock
-    private AuditoriaService auditoriaService;
+    private AuditoriaPort auditoriaService;
 
     private VeiculoProjecaoService service;
 
@@ -36,11 +41,11 @@ class VeiculoProjecaoServiceTest {
     @Test
     void deveCriarProjecaoComoDisponivel() {
         UUID id = UUID.randomUUID();
-        VeiculoSyncRequest request = new VeiculoSyncRequest(id, "Fiat", "Argo", 2022, "Prata",
+        DadosSincronizacaoVeiculo dados = new DadosSincronizacaoVeiculo(id, "Fiat", "Argo", 2022, "Prata",
                 BigDecimal.valueOf(78900), EstadoConservacao.SEMINOVO);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        VeiculoProjecao criado = service.criar(request);
+        VeiculoProjecao criado = service.criar(dados);
 
         assertThat(criado.getStatus()).isEqualTo(StatusVeiculo.DISPONIVEL);
         assertThat(criado.getId()).isEqualTo(id);
@@ -54,9 +59,9 @@ class VeiculoProjecaoServiceTest {
         when(repository.findById(id)).thenReturn(Optional.of(existente));
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        VeiculoSyncRequest request = new VeiculoSyncRequest(id, "Fiat", "Argo", 2022, "Branco",
+        DadosSincronizacaoVeiculo dados = new DadosSincronizacaoVeiculo(id, "Fiat", "Argo", 2022, "Branco",
                 BigDecimal.valueOf(76900), EstadoConservacao.SEMINOVO);
-        VeiculoProjecao atualizado = service.atualizar(id, request);
+        VeiculoProjecao atualizado = service.atualizar(id, dados);
 
         assertThat(atualizado.getCor()).isEqualTo("Branco");
         assertThat(atualizado.getPreco()).isEqualByComparingTo(BigDecimal.valueOf(76900));
@@ -67,10 +72,10 @@ class VeiculoProjecaoServiceTest {
     void deveFalharAoAtualizarVeiculoInexistente() {
         UUID id = UUID.randomUUID();
         when(repository.findById(id)).thenReturn(Optional.empty());
-        VeiculoSyncRequest request = new VeiculoSyncRequest(id, "Fiat", "Argo", 2022, "Branco",
+        DadosSincronizacaoVeiculo dados = new DadosSincronizacaoVeiculo(id, "Fiat", "Argo", 2022, "Branco",
                 BigDecimal.valueOf(76900), EstadoConservacao.SEMINOVO);
 
-        assertThatThrownBy(() -> service.atualizar(id, request))
+        assertThatThrownBy(() -> service.atualizar(id, dados))
                 .isInstanceOf(VeiculoNaoEncontradoException.class);
     }
 
