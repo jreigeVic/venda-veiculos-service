@@ -5,6 +5,7 @@ import com.soat.vendaveiculos.venda.domain.CpfInvalidoException;
 import com.soat.vendaveiculos.venda.application.PagamentoNaoEncontradoException;
 import com.soat.vendaveiculos.veiculo.domain.VeiculoIndisponivelException;
 import com.soat.vendaveiculos.veiculo.application.VeiculoNaoEncontradoException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -53,5 +54,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErroResponse> tratar(MethodArgumentTypeMismatchException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErroResponse("Parâmetro inválido: " + ex.getName()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErroResponse> tratar(DataIntegrityViolationException ex) {
+        auditoriaService.registrarErro("VIOLACAO_INTEGRIDADE_DADOS", null, ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErroResponse("Conflito ao persistir os dados"));
     }
 }

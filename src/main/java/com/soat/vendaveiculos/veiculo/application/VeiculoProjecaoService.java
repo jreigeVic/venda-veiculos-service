@@ -31,10 +31,25 @@ public class VeiculoProjecaoService implements CriarProjecaoVeiculoUseCase, Atua
     @Override
     @Transactional
     public VeiculoProjecao criar(DadosSincronizacaoVeiculo dados) {
+        return repository.findById(dados.id())
+                .map(existente -> reprocessarCriacao(existente, dados))
+                .orElseGet(() -> criarNovaProjecao(dados));
+    }
+
+    private VeiculoProjecao criarNovaProjecao(DadosSincronizacaoVeiculo dados) {
         VeiculoProjecao veiculo = VeiculoProjecao.novaDisponivel(dados.id(), dados.marca(), dados.modelo(),
                 dados.ano(), dados.cor(), dados.preco(), dados.estadoConservacao());
         VeiculoProjecao salvo = repository.save(veiculo);
         auditoriaService.registrarSucesso("CRIAR_PROJECAO_VEICULO", salvo.getId(), "Projeção criada como DISPONIVEL");
+        return salvo;
+    }
+
+    private VeiculoProjecao reprocessarCriacao(VeiculoProjecao existente, DadosSincronizacaoVeiculo dados) {
+        existente.atualizarDadosCadastrais(dados.marca(), dados.modelo(), dados.ano(), dados.cor(),
+                dados.preco(), dados.estadoConservacao());
+        VeiculoProjecao salvo = repository.save(existente);
+        auditoriaService.registrarSucesso("CRIAR_PROJECAO_VEICULO", salvo.getId(),
+                "Evento de criação reprocessado — projeção já existia, dados cadastrais atualizados (status preservado)");
         return salvo;
     }
 

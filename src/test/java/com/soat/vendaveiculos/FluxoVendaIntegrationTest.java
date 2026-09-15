@@ -211,4 +211,27 @@ class FluxoVendaIntegrationTest {
         mockMvc.perform(get("/veiculos").param("status", "INEXISTENTE"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void deveReprocessarEventoDeCriacaoDuplicadoSemErroQuandoIdJaExiste() throws Exception {
+        UUID veiculoId = UUID.randomUUID();
+        String payloadCriacao = """
+                { "id": "%s", "marca": "Fiat", "modelo": "Argo", "ano": 2022, "cor": "Prata", "preco": 78900.00, "estadoConservacao": "SEMINOVO" }
+                """.formatted(veiculoId);
+
+        mockMvc.perform(post("/interno/veiculos")
+                        .header("X-Internal-Token", TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payloadCriacao))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("DISPONIVEL"));
+
+        // reenvio do mesmo evento de criacao (simula redelivery do Outbox) - nao pode quebrar
+        mockMvc.perform(post("/interno/veiculos")
+                        .header("X-Internal-Token", TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payloadCriacao))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("DISPONIVEL"));
+    }
 }

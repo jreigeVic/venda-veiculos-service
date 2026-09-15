@@ -43,12 +43,29 @@ class VeiculoProjecaoServiceTest {
         UUID id = UUID.randomUUID();
         DadosSincronizacaoVeiculo dados = new DadosSincronizacaoVeiculo(id, "Fiat", "Argo", 2022, "Prata",
                 BigDecimal.valueOf(78900), EstadoConservacao.SEMINOVO);
+        when(repository.findById(id)).thenReturn(Optional.empty());
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         VeiculoProjecao criado = service.criar(dados);
 
         assertThat(criado.getStatus()).isEqualTo(StatusVeiculo.DISPONIVEL);
         assertThat(criado.getId()).isEqualTo(id);
+    }
+
+    @Test
+    void deveReprocessarCriacaoSemFalharQuandoIdJaExiste() {
+        UUID id = UUID.randomUUID();
+        VeiculoProjecao existente = new VeiculoProjecao(id, "Fiat", "Argo", 2022, "Prata",
+                BigDecimal.valueOf(78900), EstadoConservacao.SEMINOVO, StatusVeiculo.RESERVADO, 2L);
+        when(repository.findById(id)).thenReturn(Optional.of(existente));
+        when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        DadosSincronizacaoVeiculo dados = new DadosSincronizacaoVeiculo(id, "Fiat", "Argo", 2022, "Prata",
+                BigDecimal.valueOf(78900), EstadoConservacao.SEMINOVO);
+        VeiculoProjecao resultado = service.criar(dados);
+
+        assertThat(resultado.getId()).isEqualTo(id);
+        assertThat(resultado.getStatus()).isEqualTo(StatusVeiculo.RESERVADO);
     }
 
     @Test
