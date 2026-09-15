@@ -5,6 +5,7 @@ import com.soat.vendaveiculos.veiculo.application.port.in.AtualizarProjecaoVeicu
 import com.soat.vendaveiculos.veiculo.application.port.in.CriarProjecaoVeiculoUseCase;
 import com.soat.vendaveiculos.veiculo.application.port.in.DadosSincronizacaoVeiculo;
 import com.soat.vendaveiculos.veiculo.application.port.in.ListarVeiculosAVendaUseCase;
+import com.soat.vendaveiculos.veiculo.application.port.in.ListarVeiculosPorStatusUseCase;
 import com.soat.vendaveiculos.veiculo.application.port.in.ListarVeiculosVendidosUseCase;
 import com.soat.vendaveiculos.veiculo.application.port.out.VeiculoProjecaoRepositoryPort;
 import com.soat.vendaveiculos.veiculo.domain.StatusVeiculo;
@@ -17,7 +18,7 @@ import java.util.UUID;
 
 @Service
 public class VeiculoProjecaoService implements CriarProjecaoVeiculoUseCase, AtualizarProjecaoVeiculoUseCase,
-        ListarVeiculosAVendaUseCase, ListarVeiculosVendidosUseCase {
+        ListarVeiculosAVendaUseCase, ListarVeiculosVendidosUseCase, ListarVeiculosPorStatusUseCase {
 
     private final VeiculoProjecaoRepositoryPort repository;
     private final AuditoriaPort auditoriaService;
@@ -30,10 +31,25 @@ public class VeiculoProjecaoService implements CriarProjecaoVeiculoUseCase, Atua
     @Override
     @Transactional
     public VeiculoProjecao criar(DadosSincronizacaoVeiculo dados) {
+        return repository.findById(dados.id())
+                .map(existente -> reprocessarCriacao(existente, dados))
+                .orElseGet(() -> criarNovaProjecao(dados));
+    }
+
+    private VeiculoProjecao criarNovaProjecao(DadosSincronizacaoVeiculo dados) {
         VeiculoProjecao veiculo = VeiculoProjecao.novaDisponivel(dados.id(), dados.marca(), dados.modelo(),
                 dados.ano(), dados.cor(), dados.preco(), dados.estadoConservacao());
         VeiculoProjecao salvo = repository.save(veiculo);
         auditoriaService.registrarSucesso("CRIAR_PROJECAO_VEICULO", salvo.getId(), "Projeção criada como DISPONIVEL");
+        return salvo;
+    }
+
+    private VeiculoProjecao reprocessarCriacao(VeiculoProjecao existente, DadosSincronizacaoVeiculo dados) {
+        existente.atualizarDadosCadastrais(dados.marca(), dados.modelo(), dados.ano(), dados.cor(),
+                dados.preco(), dados.estadoConservacao());
+        VeiculoProjecao salvo = repository.save(existente);
+        auditoriaService.registrarSucesso("CRIAR_PROJECAO_VEICULO", salvo.getId(),
+                "Evento de criação reprocessado — projeção já existia, dados cadastrais atualizados (status preservado)");
         return salvo;
     }
 
@@ -59,5 +75,10 @@ public class VeiculoProjecaoService implements CriarProjecaoVeiculoUseCase, Atua
     @Override
     public List<VeiculoProjecao> listarVendidos() {
         return repository.findByStatusOrderByPrecoAsc(StatusVeiculo.VENDIDO);
+    }
+
+    @Override
+    public List<VeiculoProjecao> listarPorStatus(StatusVeiculo status) {
+        return repository.findByStatusOrderByPrecoAsc(status);
     }
 }

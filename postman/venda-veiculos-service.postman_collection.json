@@ -6,7 +6,7 @@
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8081" },
-    { "key": "internalToken", "value": "troque-por-um-token-real" },
+    { "key": "internalToken", "value": "dev-only-token" },
     { "key": "veiculoId", "value": "" },
     { "key": "codigoPagamento", "value": "" }
   ],
@@ -56,6 +56,18 @@
       }
     },
     {
+      "name": "Listar veiculos por status",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/veiculos?status=RESERVADO",
+          "host": [ "{{baseUrl}}" ],
+          "path": [ "veiculos" ],
+          "query": [ { "key": "status", "value": "RESERVADO" } ]
+        }
+      }
+    },
+    {
       "name": "Efetuar venda",
       "request": {
         "method": "POST",
@@ -63,7 +75,7 @@
         "url": "{{baseUrl}}/vendas",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"veiculoId\": \"{{veiculoId}}\",\n  \"cpfComprador\": \"12345678901\",\n  \"dataVenda\": \"2026-09-12\"\n}"
+          "raw": "{\n  \"veiculoId\": \"{{veiculoId}}\",\n  \"cpfComprador\": \"111.444.777-35\",\n  \"dataVenda\": \"2026-09-12\"\n}"
         }
       }
     },

@@ -61,7 +61,7 @@ class FluxoVendaIntegrationTest {
 
         mockMvc.perform(get("/veiculos/a-venda"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(veiculoId.toString()));
+                .andExpect(jsonPath("$[?(@.id=='" + veiculoId + "')]").exists());
 
         String payloadVenda = """
                 {
@@ -83,7 +83,7 @@ class FluxoVendaIntegrationTest {
 
         mockMvc.perform(get("/veiculos/a-venda"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isEmpty());
+                .andExpect(jsonPath("$[?(@.id=='" + veiculoId + "')]").doesNotExist());
 
         String payloadWebhook = """
                 { "codigoPagamento": "%s", "status": "APROVADO" }
@@ -96,7 +96,7 @@ class FluxoVendaIntegrationTest {
 
         mockMvc.perform(get("/veiculos/vendidos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].id").value(veiculoId.toString()));
+                .andExpect(jsonPath("$[?(@.id=='" + veiculoId + "')]").exists());
 
         mockMvc.perform(post("/pagamentos/webhook")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -182,5 +182,56 @@ class FluxoVendaIntegrationTest {
 
         mockMvc.perform(post("/pagamentos/webhook").contentType(MediaType.APPLICATION_JSON).content(payload))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void deveListarVeiculosPorStatus() throws Exception {
+        UUID veiculoId = UUID.randomUUID();
+        String payloadCriacao = """
+                { "id": "%s", "marca": "Fiat", "modelo": "Argo", "ano": 2022, "cor": "Prata", "preco": 78900.00, "estadoConservacao": "SEMINOVO" }
+                """.formatted(veiculoId);
+
+        mockMvc.perform(post("/interno/veiculos")
+                        .header("X-Internal-Token", TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payloadCriacao))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/veiculos").param("status", "DISPONIVEL"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id=='" + veiculoId + "')]").exists());
+
+        mockMvc.perform(get("/veiculos").param("status", "VENDIDO"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.id=='" + veiculoId + "')]").doesNotExist());
+    }
+
+    @Test
+    void deveRetornarBadRequestParaStatusInvalido() throws Exception {
+        mockMvc.perform(get("/veiculos").param("status", "INEXISTENTE"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void deveReprocessarEventoDeCriacaoDuplicadoSemErroQuandoIdJaExiste() throws Exception {
+        UUID veiculoId = UUID.randomUUID();
+        String payloadCriacao = """
+                { "id": "%s", "marca": "Fiat", "modelo": "Argo", "ano": 2022, "cor": "Prata", "preco": 78900.00, "estadoConservacao": "SEMINOVO" }
+                """.formatted(veiculoId);
+
+        mockMvc.perform(post("/interno/veiculos")
+                        .header("X-Internal-Token", TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payloadCriacao))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("DISPONIVEL"));
+
+        // reenvio do mesmo evento de criacao (simula redelivery do Outbox) - nao pode quebrar
+        mockMvc.perform(post("/interno/veiculos")
+                        .header("X-Internal-Token", TOKEN)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payloadCriacao))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value("DISPONIVEL"));
     }
 }
