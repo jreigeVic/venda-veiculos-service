@@ -20,29 +20,43 @@ flowchart TB
     pagamento(["Processadora de pagamento (externa)"]) -->|"notifica status via webhook"| venda
 ```
 
+Internamente, os dois serviços seguem **Arquitetura Hexagonal** (Ports & Adapters): o Domain não
+conhece Spring/JPA/HTTP; a Application (Use Cases) só conhece Ports; Adapters (web, scheduler,
+persistência JPA, cliente HTTP) isolam a tecnologia concreta.
+
 ## Componentes — Software principal
 
 ```mermaid
 flowchart TB
     subgraph "Software principal"
-        API["Controller REST<br/>/veiculos"]
-        SVC["VeiculoService"]
-        REPO[("VeiculoRepository<br/>PostgreSQL")]
-        OUTBOX[("EventoSincronizacaoRepository<br/>(Outbox)")]
-        JOB["Job de reenvio<br/>(scheduled, backoff)"]
+        API["Adapter in/web<br/>VeiculoController<br/>/veiculos"]
+        UC["Application (Use Cases)<br/>CadastrarVeiculoService<br/>EditarVeiculoService"]
+        DOM["Domain<br/>Veiculo"]
+        REPO[("Adapter out/persistence<br/>VeiculoPersistenceAdapter<br/>PostgreSQL")]
+        SYNCSVC["Application<br/>SincronizacaoService<br/>(SincronizacaoEventoPort)"]
+        OUTBOX[("Adapter out/persistence<br/>EventoSincronizacaoPersistenceAdapter<br/>(Outbox)")]
+        JOBADAPTER["Adapter in/scheduler<br/>SincronizacaoJob"]
+        JOBSVC["Application<br/>ReenviarEventosPendentesService<br/>(backoff, retry)"]
         SEC["Spring Security<br/>(usuário) / token interno"]
-        LOG[("LogAuditoria")]
+        AUDPORT["Application Port<br/>AuditoriaPort"]
+        LOG[("Adapter out/persistence<br/>AuditoriaPersistenceAdapter")]
     end
 
+    HTTP_ADAPTER["Adapter out/http<br/>HttpVendaVeiculosAdapter"]
     HTTP_CLIENT["Serviço de venda<br/>/interno/veiculos"]
 
     API --> SEC
-    API --> SVC
-    SVC --> REPO
-    SVC -->|grava evento na mesma transação| OUTBOX
-    SVC --> LOG
-    JOB --> OUTBOX
-    JOB -->|POST/PUT com X-Internal-Token| HTTP_CLIENT
+    API --> UC
+    UC --> DOM
+    UC --> REPO
+    UC -->|grava evento na mesma transação| SYNCSVC
+    SYNCSVC --> OUTBOX
+    UC --> AUDPORT --> LOG
+    JOBADAPTER --> JOBSVC
+    JOBSVC --> OUTBOX
+    JOBSVC --> HTTP_ADAPTER
+    JOBSVC --> AUDPORT
+    HTTP_ADAPTER -->|POST/PUT com X-Internal-Token| HTTP_CLIENT
 ```
 
 ## Componentes — Serviço de venda de veículos
@@ -50,23 +64,28 @@ flowchart TB
 ```mermaid
 flowchart TB
     subgraph "Serviço de venda de veículos"
-        INT["Controller interno<br/>/interno/veiculos<br/>(token compartilhado)"]
-        LIST["Controller REST<br/>/veiculos/a-venda, /veiculos/vendidos"]
-        VENDA_C["Controller REST<br/>/vendas"]
-        HOOK["Controller REST<br/>/pagamentos/webhook"]
-        SVC2["VendaService / VeiculoProjecaoService"]
-        REPO2[("VeiculoProjecaoRepository<br/>PostgreSQL isolado")]
-        REPO3[("VendaRepository<br/>PostgreSQL isolado")]
-        LOG2[("LogAuditoria")]
+        INT["Adapter in/web<br/>VeiculoInternoController<br/>/interno/veiculos<br/>(token compartilhado)"]
+        LIST["Adapter in/web<br/>VeiculoListagemController<br/>/veiculos/a-venda, /veiculos/vendidos"]
+        VENDA_C["Adapter in/web<br/>VendaController<br/>/vendas"]
+        HOOK["Adapter in/web<br/>WebhookPagamentoController<br/>/pagamentos/webhook"]
+        UC2["Application (Use Cases)<br/>VeiculoProjecaoService<br/>VendaService"]
+        DOM2["Domain<br/>VeiculoProjecao, Venda<br/>(reservar/vender/liberar,<br/>aprovar/cancelar, CpfValidador)"]
+        REPO2[("Adapter out/persistence<br/>VeiculoProjecaoPersistenceAdapter<br/>PostgreSQL isolado")]
+        REPO3[("Adapter out/persistence<br/>VendaPersistenceAdapter<br/>PostgreSQL isolado")]
+        AUDPORT2["Application Port<br/>AuditoriaPort"]
+        LOG2[("Adapter out/persistence<br/>AuditoriaPersistenceAdapter")]
     end
 
     MOCK["Mock processadora de pagamento<br/>(handler estilo Lambda, execução local)"]
 
-    INT --> SVC2 --> REPO2
-    LIST --> REPO2
-    VENDA_C --> SVC2 --> REPO3
-    HOOK --> SVC2
-    SVC2 --> LOG2
+    INT --> UC2
+    LIST --> UC2
+    VENDA_C --> UC2
+    HOOK --> UC2
+    UC2 --> DOM2
+    UC2 --> REPO2
+    UC2 --> REPO3
+    UC2 --> AUDPORT2 --> LOG2
     MOCK -->|POST /pagamentos/webhook| HOOK
 ```
 

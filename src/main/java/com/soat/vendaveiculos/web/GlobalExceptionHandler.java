@@ -1,10 +1,10 @@
 package com.soat.vendaveiculos.web;
 
-import com.soat.vendaveiculos.auditoria.AuditoriaService;
-import com.soat.vendaveiculos.venda.CpfInvalidoException;
-import com.soat.vendaveiculos.venda.PagamentoNaoEncontradoException;
-import com.soat.vendaveiculos.venda.VeiculoIndisponivelException;
-import com.soat.vendaveiculos.veiculo.VeiculoNaoEncontradoException;
+import com.soat.vendaveiculos.auditoria.application.port.out.AuditoriaPort;
+import com.soat.vendaveiculos.venda.domain.CpfInvalidoException;
+import com.soat.vendaveiculos.venda.application.PagamentoNaoEncontradoException;
+import com.soat.vendaveiculos.veiculo.domain.VeiculoIndisponivelException;
+import com.soat.vendaveiculos.veiculo.application.VeiculoNaoEncontradoException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -14,9 +14,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private final AuditoriaService auditoriaService;
+    private final AuditoriaPort auditoriaService;
 
-    public GlobalExceptionHandler(AuditoriaService auditoriaService) {
+    public GlobalExceptionHandler(AuditoriaPort auditoriaService) {
         this.auditoriaService = auditoriaService;
     }
 
