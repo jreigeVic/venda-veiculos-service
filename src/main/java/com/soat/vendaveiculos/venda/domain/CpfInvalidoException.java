@@ -1,4 +1,4 @@
-package com.soat.vendaveiculos.venda;
+package com.soat.vendaveiculos.venda.domain;
 
 public class CpfInvalidoException extends RuntimeException {
 

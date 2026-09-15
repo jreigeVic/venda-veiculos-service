@@ -1,5 +1,6 @@
-package com.soat.vendaveiculos.venda;
+package com.soat.vendaveiculos.venda.adapter.out.persistence;
 
+import com.soat.vendaveiculos.venda.domain.StatusPagamento;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -22,7 +23,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Venda {
+public class VendaJpaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -42,8 +43,4 @@ public class Venda {
     private Instant criadoEm;
 
     private Instant atualizadoEm;
-
-    public boolean estaEmEstadoFinal() {
-        return statusPagamento == StatusPagamento.APROVADO || statusPagamento == StatusPagamento.CANCELADO;
-    }
 }

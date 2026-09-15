@@ -1,4 +1,4 @@
-package com.soat.vendaveiculos.venda;
+package com.soat.vendaveiculos.venda.application;
 
 import java.util.UUID;
 

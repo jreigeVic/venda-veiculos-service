@@ -1,4 +1,4 @@
-package com.soat.vendaveiculos.venda;
+package com.soat.vendaveiculos.venda.adapter.in.web;
 
 import jakarta.validation.constraints.NotNull;
 

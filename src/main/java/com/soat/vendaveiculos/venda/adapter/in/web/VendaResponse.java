@@ -1,4 +1,7 @@
-package com.soat.vendaveiculos.venda;
+package com.soat.vendaveiculos.venda.adapter.in.web;
+
+import com.soat.vendaveiculos.venda.domain.StatusPagamento;
+import com.soat.vendaveiculos.venda.domain.Venda;
 
 import java.time.LocalDate;
 import java.util.UUID;

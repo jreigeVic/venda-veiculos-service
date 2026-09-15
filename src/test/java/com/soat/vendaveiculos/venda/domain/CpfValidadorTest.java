@@ -1,4 +1,4 @@
-package com.soat.vendaveiculos.venda;
+package com.soat.vendaveiculos.venda.domain;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

@@ -1,11 +1,18 @@
-package com.soat.vendaveiculos.venda;
+package com.soat.vendaveiculos.venda.application;
 
-import com.soat.vendaveiculos.auditoria.AuditoriaService;
-import com.soat.vendaveiculos.veiculo.EstadoConservacao;
-import com.soat.vendaveiculos.veiculo.StatusVeiculo;
-import com.soat.vendaveiculos.veiculo.VeiculoNaoEncontradoException;
-import com.soat.vendaveiculos.veiculo.VeiculoProjecao;
-import com.soat.vendaveiculos.veiculo.VeiculoProjecaoRepository;
+import com.soat.vendaveiculos.auditoria.application.port.out.AuditoriaPort;
+import com.soat.vendaveiculos.veiculo.application.VeiculoNaoEncontradoException;
+import com.soat.vendaveiculos.veiculo.application.port.out.VeiculoProjecaoRepositoryPort;
+import com.soat.vendaveiculos.veiculo.domain.EstadoConservacao;
+import com.soat.vendaveiculos.veiculo.domain.StatusVeiculo;
+import com.soat.vendaveiculos.veiculo.domain.VeiculoIndisponivelException;
+import com.soat.vendaveiculos.veiculo.domain.VeiculoProjecao;
+import com.soat.vendaveiculos.venda.application.port.in.DadosVenda;
+import com.soat.vendaveiculos.venda.application.port.in.NotificacaoPagamento;
+import com.soat.vendaveiculos.venda.application.port.out.VendaRepositoryPort;
+import com.soat.vendaveiculos.venda.domain.CpfInvalidoException;
+import com.soat.vendaveiculos.venda.domain.StatusPagamento;
+import com.soat.vendaveiculos.venda.domain.Venda;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,13 +36,13 @@ import static org.mockito.Mockito.when;
 class VendaServiceTest {
 
     @Mock
-    private VendaRepository vendaRepository;
+    private VendaRepositoryPort vendaRepository;
 
     @Mock
-    private VeiculoProjecaoRepository veiculoRepository;
+    private VeiculoProjecaoRepositoryPort veiculoRepository;
 
     @Mock
-    private AuditoriaService auditoriaService;
+    private AuditoriaPort auditoriaService;
 
     private VendaService service;
 
@@ -48,8 +55,8 @@ class VendaServiceTest {
     }
 
     private VeiculoProjecao veiculoDisponivel() {
-        return new VeiculoProjecao(veiculoId, "Fiat", "Argo", 2022, "Prata",
-                BigDecimal.valueOf(78900), EstadoConservacao.SEMINOVO, StatusVeiculo.DISPONIVEL, null);
+        return VeiculoProjecao.novaDisponivel(veiculoId, "Fiat", "Argo", 2022, "Prata",
+                BigDecimal.valueOf(78900), EstadoConservacao.SEMINOVO);
     }
 
     @Test
@@ -57,8 +64,8 @@ class VendaServiceTest {
         when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculoDisponivel()));
         when(vendaRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        VendaRequest request = new VendaRequest(veiculoId, "111.444.777-35", LocalDate.now());
-        Venda venda = service.efetuarVenda(request);
+        DadosVenda dados = new DadosVenda(veiculoId, "111.444.777-35", LocalDate.now());
+        Venda venda = service.efetuar(dados);
 
         assertThat(venda.getStatusPagamento()).isEqualTo(StatusPagamento.PENDENTE);
         assertThat(venda.getCodigoPagamento()).isNotNull();
@@ -71,9 +78,9 @@ class VendaServiceTest {
 
     @Test
     void deveRejeitarCpfInvalido() {
-        VendaRequest request = new VendaRequest(veiculoId, "111.111.111-11", LocalDate.now());
+        DadosVenda dados = new DadosVenda(veiculoId, "111.111.111-11", LocalDate.now());
 
-        assertThatThrownBy(() -> service.efetuarVenda(request))
+        assertThatThrownBy(() -> service.efetuar(dados))
                 .isInstanceOf(CpfInvalidoException.class);
 
         verify(vendaRepository, never()).save(any());
@@ -82,21 +89,21 @@ class VendaServiceTest {
     @Test
     void deveRejeitarVeiculoInexistente() {
         when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.empty());
-        VendaRequest request = new VendaRequest(veiculoId, "111.444.777-35", LocalDate.now());
+        DadosVenda dados = new DadosVenda(veiculoId, "111.444.777-35", LocalDate.now());
 
-        assertThatThrownBy(() -> service.efetuarVenda(request))
+        assertThatThrownBy(() -> service.efetuar(dados))
                 .isInstanceOf(VeiculoNaoEncontradoException.class);
     }
 
     @Test
     void deveRejeitarVeiculoIndisponivel() {
         VeiculoProjecao reservado = veiculoDisponivel();
-        reservado.setStatus(StatusVeiculo.RESERVADO);
+        reservado.reservar();
         when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(reservado));
 
-        VendaRequest request = new VendaRequest(veiculoId, "111.444.777-35", LocalDate.now());
+        DadosVenda dados = new DadosVenda(veiculoId, "111.444.777-35", LocalDate.now());
 
-        assertThatThrownBy(() -> service.efetuarVenda(request))
+        assertThatThrownBy(() -> service.efetuar(dados))
                 .isInstanceOf(VeiculoIndisponivelException.class);
     }
 
@@ -104,12 +111,12 @@ class VendaServiceTest {
     void deveMarcarVeiculoComoVendidoQuandoWebhookAprovado() {
         Venda venda = vendaPendente();
         VeiculoProjecao veiculo = veiculoDisponivel();
-        veiculo.setStatus(StatusVeiculo.RESERVADO);
+        veiculo.reservar();
 
         when(vendaRepository.findByCodigoPagamento(venda.getCodigoPagamento())).thenReturn(Optional.of(venda));
         when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculo));
 
-        service.processarWebhook(new WebhookRequest(venda.getCodigoPagamento(), WebhookRequest.StatusPagamentoWebhook.APROVADO));
+        service.processar(new NotificacaoPagamento(venda.getCodigoPagamento(), NotificacaoPagamento.Status.APROVADO));
 
         assertThat(venda.getStatusPagamento()).isEqualTo(StatusPagamento.APROVADO);
         assertThat(veiculo.getStatus()).isEqualTo(StatusVeiculo.VENDIDO);
@@ -119,12 +126,12 @@ class VendaServiceTest {
     void deveVoltarVeiculoParaDisponivelQuandoWebhookCancelado() {
         Venda venda = vendaPendente();
         VeiculoProjecao veiculo = veiculoDisponivel();
-        veiculo.setStatus(StatusVeiculo.RESERVADO);
+        veiculo.reservar();
 
         when(vendaRepository.findByCodigoPagamento(venda.getCodigoPagamento())).thenReturn(Optional.of(venda));
         when(veiculoRepository.findById(veiculoId)).thenReturn(Optional.of(veiculo));
 
-        service.processarWebhook(new WebhookRequest(venda.getCodigoPagamento(), WebhookRequest.StatusPagamentoWebhook.CANCELADO));
+        service.processar(new NotificacaoPagamento(venda.getCodigoPagamento(), NotificacaoPagamento.Status.CANCELADO));
 
         assertThat(venda.getStatusPagamento()).isEqualTo(StatusPagamento.CANCELADO);
         assertThat(veiculo.getStatus()).isEqualTo(StatusVeiculo.DISPONIVEL);
@@ -132,12 +139,11 @@ class VendaServiceTest {
 
     @Test
     void webhookDeveSerIdempotenteQuandoVendaJaEstaEmEstadoFinal() {
-        Venda venda = vendaPendente();
-        venda.setStatusPagamento(StatusPagamento.APROVADO);
+        Venda venda = vendaAprovada();
 
         when(vendaRepository.findByCodigoPagamento(venda.getCodigoPagamento())).thenReturn(Optional.of(venda));
 
-        service.processarWebhook(new WebhookRequest(venda.getCodigoPagamento(), WebhookRequest.StatusPagamentoWebhook.CANCELADO));
+        service.processar(new NotificacaoPagamento(venda.getCodigoPagamento(), NotificacaoPagamento.Status.CANCELADO));
 
         assertThat(venda.getStatusPagamento()).isEqualTo(StatusPagamento.APROVADO);
         verify(veiculoRepository, never()).findById(any());
@@ -148,12 +154,17 @@ class VendaServiceTest {
         UUID codigo = UUID.randomUUID();
         when(vendaRepository.findByCodigoPagamento(codigo)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.processarWebhook(new WebhookRequest(codigo, WebhookRequest.StatusPagamentoWebhook.APROVADO)))
+        assertThatThrownBy(() -> service.processar(new NotificacaoPagamento(codigo, NotificacaoPagamento.Status.APROVADO)))
                 .isInstanceOf(PagamentoNaoEncontradoException.class);
     }
 
     private Venda vendaPendente() {
-        return new Venda(UUID.randomUUID(), veiculoId, "111.444.777-35", LocalDate.now(),
-                UUID.randomUUID(), StatusPagamento.PENDENTE, java.time.Instant.now(), java.time.Instant.now());
+        return Venda.criar(veiculoId, "111.444.777-35", LocalDate.now());
+    }
+
+    private Venda vendaAprovada() {
+        Venda venda = vendaPendente();
+        venda.aprovar();
+        return venda;
     }
 }
