@@ -1,4 +1,4 @@
-package com.soat.vendaveiculos.auditoria;
+package com.soat.vendaveiculos.auditoria.adapter.out.persistence;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -19,7 +19,7 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class LogAuditoria {
+public class LogAuditoriaJpaEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -38,11 +38,11 @@ public class LogAuditoria {
 
     private Instant criadoEm;
 
-    public static LogAuditoria sucesso(String operacao, UUID entidadeId, String detalhe) {
-        return new LogAuditoria(null, "venda-veiculos-service", operacao, entidadeId, Resultado.SUCESSO, detalhe, Instant.now());
+    public static LogAuditoriaJpaEntity sucesso(String operacao, UUID entidadeId, String detalhe) {
+        return new LogAuditoriaJpaEntity(null, "venda-veiculos-service", operacao, entidadeId, Resultado.SUCESSO, detalhe, Instant.now());
     }
 
-    public static LogAuditoria erro(String operacao, UUID entidadeId, String detalhe) {
-        return new LogAuditoria(null, "venda-veiculos-service", operacao, entidadeId, Resultado.ERRO, detalhe, Instant.now());
+    public static LogAuditoriaJpaEntity erro(String operacao, UUID entidadeId, String detalhe) {
+        return new LogAuditoriaJpaEntity(null, "venda-veiculos-service", operacao, entidadeId, Resultado.ERRO, detalhe, Instant.now());
     }
 }
