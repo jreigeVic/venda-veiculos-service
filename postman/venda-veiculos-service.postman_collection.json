@@ -6,7 +6,7 @@
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:8081" },
-    { "key": "internalToken", "value": "troque-por-um-token-real" },
+    { "key": "internalToken", "value": "dev-only-token" },
     { "key": "veiculoId", "value": "" },
     { "key": "codigoPagamento", "value": "" }
   ],
@@ -63,7 +63,7 @@
         "url": "{{baseUrl}}/vendas",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"veiculoId\": \"{{veiculoId}}\",\n  \"cpfComprador\": \"12345678901\",\n  \"dataVenda\": \"2026-09-12\"\n}"
+          "raw": "{\n  \"veiculoId\": \"{{veiculoId}}\",\n  \"cpfComprador\": \"111.444.777-35\",\n  \"dataVenda\": \"2026-09-12\"\n}"
         }
       }
     },
